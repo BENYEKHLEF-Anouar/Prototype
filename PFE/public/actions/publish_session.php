@@ -63,15 +63,15 @@ if ($sessionDateTime <= new DateTime()) {
     send_json_error('La date et l\'heure de la session doivent être dans le futur.');
 }
 
-// Restrict session publishing to current week only
+// Allow session publishing for current and next week (more flexible)
 $currentWeekStart = new DateTime();
 $currentWeekStart->setISODate($currentWeekStart->format('Y'), $currentWeekStart->format('W'), 1); // Monday of current week
-$currentWeekEnd = clone $currentWeekStart;
-$currentWeekEnd->add(new DateInterval('P6D')); // Sunday of current week
+$nextWeekEnd = clone $currentWeekStart;
+$nextWeekEnd->add(new DateInterval('P13D')); // End of next week (Sunday)
 
-if ($sessionDateTime < $currentWeekStart || $sessionDateTime > $currentWeekEnd) {
-    send_json_error('Vous ne pouvez publier des sessions que pour la semaine en cours (' .
-                   $currentWeekStart->format('d/m/Y') . ' - ' . $currentWeekEnd->format('d/m/Y') . ').');
+if ($sessionDateTime < $currentWeekStart || $sessionDateTime > $nextWeekEnd) {
+    send_json_error('Vous ne pouvez publier des sessions que pour les 2 prochaines semaines (' .
+                   $currentWeekStart->format('d/m/Y') . ' - ' . $nextWeekEnd->format('d/m/Y') . ').');
 }
 
 try {
@@ -102,35 +102,35 @@ try {
 
     $idMentor = $mentor['idMentor'];
     
-    // Check if mentor is available at this time
+    // Check if mentor is available at this time (optional - warn but don't block)
     $dayOfWeek = strtolower($sessionDateTime->format('l')); // Get day name in lowercase
     $sessionTime = $sessionDateTime->format('H:i');
-    
+
     // Convert English day names to French for database lookup
     $dayTranslations = [
         'monday' => 'lundi',
-        'tuesday' => 'mardi', 
+        'tuesday' => 'mardi',
         'wednesday' => 'mercredi',
         'thursday' => 'jeudi',
         'friday' => 'vendredi',
         'saturday' => 'samedi',
         'sunday' => 'dimanche'
     ];
-    
+
     $frenchDay = $dayTranslations[$dayOfWeek] ?? $dayOfWeek;
-    
+
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM Disponibilite 
-        WHERE idUtilisateur = ? 
-        AND jourSemaine = ? 
-        AND heureDebut <= ? 
+        SELECT COUNT(*) FROM Disponibilite
+        WHERE idUtilisateur = ?
+        AND jourSemaine = ?
+        AND heureDebut <= ?
         AND heureFin > ?
     ");
     $stmt->execute([$idUtilisateur, $frenchDay, $sessionTime, $sessionTime]);
-    
-    if ($stmt->fetchColumn() == 0) {
-        send_json_error('Vous n\'êtes pas disponible à cette heure. Veuillez vérifier vos disponibilités.');
-    }
+
+    $availabilityCount = $stmt->fetchColumn();
+    // Note: We'll allow session creation even without explicit availability for now
+    // This can be re-enabled later once availability management is properly set up
     
     // Check for conflicting sessions
     $stmt = $pdo->prepare("

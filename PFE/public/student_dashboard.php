@@ -321,21 +321,6 @@ require '../includes/header.php';
             </div>
         </div>
 
-        <!-- Mes Mentors Tab -->
-        <!-- <div id="mes-mentors" class="tab-content">
-            <h2 class="tab-title">Vos Mentors</h2>
-            <div class="mentors-grid">
-                <?php if (empty($my_mentors)): ?><p class="no-data-text">Vous n'avez pas encore eu de session. <a href="mentors.php" style="color:var(--primary-blue); text-decoration:underline;">Trouvez un mentor</a> pour commencer !</p><?php else: foreach ($my_mentors as $mentor): ?>
-                <div class="mentor-card-small">
-                    <img src="<?= get_profile_image_path($mentor['photoUrl']) ?>" class="mentor-photo-small" alt="Photo de <?= sanitize($mentor['prenomUtilisateur']) ?>">
-                    <h5 class="mentor-name-small"><?= sanitize($mentor['prenomUtilisateur'] . ' ' . $mentor['nomUtilisateur']) ?></h5>
-                    <p class="mentor-specialty-small"><?= sanitize(explode(',', $mentor['competences'])[0]) ?></p>
-                    <a href="#messagerie" class="btn-contact-small contact-from-grid tab-link" data-tab="messagerie" data-user-id="<?= $mentor['idUtilisateur'] ?>" data-user-name="<?= sanitize($mentor['prenomUtilisateur'].' '.$mentor['nomUtilisateur']) ?>" data-user-photo="<?= get_profile_image_path($mentor['photoUrl']) ?>">Contacter</a>
-                </div>
-                <?php endforeach; endif; ?>
-            </div>
-        </div> -->
-
         <div id="disponibilites" class="tab-content">
             <h3 class="tab-title">Gérez vos Disponibilités</h3>
             <div class="availability-card">
@@ -393,99 +378,42 @@ require '../includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Hide Preloader Immediately ---
+    // Hide preloader
     const preloader = document.getElementById('preloader');
     if (preloader) {
         preloader.classList.add('preloader-hidden');
     }
 
-    // --- General Setup ---
+    // --- Configuration & State ---
     const csrfToken = <?= json_encode($csrf_token) ?>;
     const currentUserId = <?= json_encode($student_user_id) ?>;
     let activeChatUserId = null;
+    let studentChart = null;
 
-    // --- Global Feedback Function ---
+    // --- DOM Elements ---
     const feedbackGlobal = document.getElementById('feedback-container-global');
+    const tabs = document.querySelectorAll('.dashboard-tab, .tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const availabilityForm = document.getElementById('availability-form');
+    const evaluationModal = document.getElementById('evaluation-modal');
+    const evaluationForm = document.getElementById('evaluation-form');
+    const messageForm = document.getElementById('message-form');
+    const messageArea = document.getElementById('message-area');
+    const chatHeaderName = document.getElementById('chat-header-name');
+
+    // --- Utility Functions ---
     function showGlobalFeedback(message, type = 'success') {
+        if (!feedbackGlobal) return;
         feedbackGlobal.className = `message ${type}`;
         feedbackGlobal.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
         feedbackGlobal.style.display = 'block';
         setTimeout(() => { feedbackGlobal.style.display = 'none'; }, 4000);
     }
 
-    // --- Tab Navigation ---
-    console.log('Initializing tab navigation...');
-    const tabs = document.querySelectorAll('.dashboard-tab, .tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    console.log('Found tabs:', tabs.length);
-    console.log('Found tab contents:', tabContents.length);
-
-    function activateTab(tabName) {
-        console.log('Activating tab:', tabName);
-        if (!tabName) return;
-
-        tabs.forEach(t => {
-            const isActive = t.dataset.tab === tabName;
-            t.classList.toggle('active', isActive);
-            console.log(`Tab ${t.dataset.tab}: ${isActive ? 'active' : 'inactive'}`);
-        });
-
-        tabContents.forEach(c => {
-            const isActive = c.id === tabName;
-            c.classList.toggle('active', isActive);
-            console.log(`Content ${c.id}: ${isActive ? 'active' : 'inactive'}`);
-        });
-
-        if(window.location.hash !== `#${tabName}`) {
-            history.pushState(null, null, `#${tabName}`);
-        }
-
-        // Initialize chart when switching to statistiques tab
-        if (tabName === 'statistiques') {
-            setTimeout(initializeChart, 100);
-        }
-    }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', e => {
-            e.preventDefault();
-            console.log('Tab clicked:', tab.dataset.tab);
-            activateTab(e.currentTarget.dataset.tab);
-        });
-    });
-
-    // Initialize with current hash or default
-    const initialTab = window.location.hash.substring(1) || 'statistiques';
-    console.log('Initial tab:', initialTab);
-    activateTab(initialTab);
-
-    // --- Chart Initialization ---
-    let studentChart = null;
-    let chartRendered = false;
-
+    // --- Charting ---
     function initializeChart() {
         const canvas = document.getElementById('studentChart');
-        if (!canvas) {
-            console.error('Student chart canvas not found');
-            return;
-        }
-
-        // Don't render if already rendered successfully
-        if (chartRendered && studentChart) {
-            console.log('Student chart already rendered, skipping...');
-            return;
-        }
-
-        // Debug chart data
-        console.log('Student Chart Labels:', <?= json_encode($chart_labels) ?>);
-        console.log('Student Chart Values:', <?= json_encode($chart_values) ?>);
-        console.log('Initializing student chart...');
-        console.log('Canvas element:', canvas);
-
-        // Ensure canvas has proper dimensions
-        canvas.style.width = '100%';
-        canvas.style.height = '300px';
+        if (!canvas || studentChart) return; // Don't re-render
 
         try {
             const chartData = {
@@ -498,386 +426,107 @@ document.addEventListener('DOMContentLoaded', () => {
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: 'rgba(37, 99, 235, 1)',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
                 }]
             };
-
-            const chartConfig = {
+            studentChart = new Chart(canvas, {
                 type: 'line',
                 data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
-                            borderColor: 'rgba(37, 99, 235, 1)',
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1,
-                                color: '#64748b'
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: '#64748b'
-                            },
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    elements: {
-                        point: {
-                            hoverBackgroundColor: 'rgba(37, 99, 235, 1)',
-                            hoverBorderColor: '#ffffff'
-                        }
-                    }
-                }
-            };
-
-            studentChart = new Chart(canvas, chartConfig);
-            chartRendered = true;
-            console.log('Student chart created successfully!');
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
         } catch (error) {
             console.error('Error creating student chart:', error);
-            console.error('Chart.js available:', typeof Chart !== 'undefined');
-            chartRendered = false;
         }
     }
 
-    // Initialize chart when statistiques tab is active
-    const currentTab = window.location.hash.substring(1) || 'statistiques';
-    if (currentTab === 'statistiques') {
-        // Try multiple times to ensure chart renders
-        setTimeout(() => initializeChart(), 100);
-        setTimeout(() => initializeChart(), 500);
-        setTimeout(() => initializeChart(), 1000);
+    // --- Tab Navigation ---
+    function activateTab(tabName) {
+        if (!tabName) return;
+        tabContents.forEach(c => c.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+
+        const newActiveContent = document.getElementById(tabName);
+        if (newActiveContent) newActiveContent.classList.add('active');
+
+        document.querySelectorAll(`.dashboard-tab[data-tab="${tabName}"], .tab-link[data-tab="${tabName}"]`).forEach(t => t.classList.add('active'));
+
+        if (window.location.hash !== `#${tabName}`) {
+            history.pushState(null, null, `#${tabName}`);
+        }
+        if (tabName === 'statistiques') {
+            setTimeout(initializeChart, 50);
+        }
     }
 
-    // Also try to render chart when window loads
-    window.addEventListener('load', () => {
-        if (currentTab === 'statistiques') {
-            setTimeout(() => initializeChart(), 100);
-        }
-    });
-
-    // --- Availability Form ---
-    const availabilityForm = document.getElementById('availability-form');
-    availabilityForm.addEventListener('submit', async (e) => {
+    // --- Event Handlers ---
+    async function handleAvailabilitySubmit(e) {
         e.preventDefault();
         const feedbackDiv = document.getElementById('availability-feedback');
+        if(!feedbackDiv) return;
         feedbackDiv.style.display = 'block';
         feedbackDiv.className = 'message info';
         feedbackDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
-
         try {
-            const formData = new FormData(availabilityForm);
-            const response = await fetch('actions/update_availability.php', { method: 'POST', body: formData });
+            const response = await fetch('actions/update_availability.php', { method: 'POST', body: new FormData(availabilityForm) });
             const result = await response.json();
-            if (response.ok && result.status === 'success') {
-                feedbackDiv.className = 'message success';
-                feedbackDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${result.message}`;
-            } else {
-                throw new Error(result.message || 'La mise à jour a échoué');
-            }
+            if (!response.ok || result.status !== 'success') throw new Error(result.message || 'La mise à jour a échoué');
+            feedbackDiv.className = 'message success';
+            feedbackDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${result.message}`;
         } catch (error) {
             feedbackDiv.className = 'message error';
             feedbackDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${error.message}`;
         }
         setTimeout(() => { feedbackDiv.style.display = 'none'; }, 3000);
-    });
-
-    // --- Event Delegation for Dynamic Content ---
-    document.body.addEventListener('click', async (e) => {
-        // Session Actions
-        if (e.target.closest('.btn-cancel')) {
-            handleCancelSession(e.target.closest('.btn-cancel'));
-            return;
-        }
-        if (e.target.closest('.btn-evaluate')) {
-            openEvaluationModal(e.target.closest('.btn-evaluate'));
-            return;
-        }
-        // Modal Actions
-        if (e.target.closest('.modal-overlay:not(.modal-content)') || e.target.closest('.modal-close-btn')) {
-            document.getElementById('evaluation-modal').style.display = 'none';
-            return;
-        }
-        // Chat Actions
-        if (e.target.closest('.conversation-item')) {
-            handleConversationClick(e.target.closest('.conversation-item'));
-            return;
-        }
-        if (e.target.closest('.contact-from-grid')) {
-            handleContactFromGrid(e.target.closest('.contact-from-grid'));
-            return;
-        }
-    });
-    
-    // --- Session Actions ---
-    async function handleCancelSession(button) {
-        const sessionId = button.dataset.id;
-        if (!confirm('Êtes-vous sûr de vouloir annuler cette session ?')) return;
-        button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        try {
-            const formData = new FormData();
-            formData.append('session_id', sessionId);
-            formData.append('csrf_token', csrfToken);
-            const response = await fetch('actions/cancel_session.php', { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const result = await response.json();
-            if (result.status !== 'success') throw new Error(result.message);
-            showGlobalFeedback(result.message, 'success');
-            const card = button.closest('.session-card');
-            card.style.opacity = '0.5';
-            button.remove();
-        } catch (error) {
-            showGlobalFeedback(error.message || "Erreur lors de l'annulation.", 'error');
-            button.disabled = false; button.innerHTML = 'Annuler';
-        }
-    }
-
-    // --- Evaluation Modal & Form ---
-    const evaluationModal = document.getElementById('evaluation-modal');
-    const evaluationForm = document.getElementById('evaluation-form');
-    const stars = evaluationModal.querySelectorAll('.star-rating-input .fa-star');
-    
-    function openEvaluationModal(button) {
-        evaluationForm.reset();
-        stars.forEach(s => s.classList.replace('fas','far'));
-        document.getElementById('modal-session-id').value = button.dataset.id;
-        evaluationModal.style.display = 'flex';
-    }
-
-    stars.forEach(star => {
-        star.addEventListener('mouseover', function() {
-            const value = this.dataset.value;
-            stars.forEach(s => s.classList.toggle('fas', s.dataset.value <= value));
-            stars.forEach(s => s.classList.toggle('far', s.dataset.value > value));
-        });
-        star.addEventListener('click', function() {
-            document.getElementById('notation-input').value = this.dataset.value;
-        });
-    });
-    evaluationModal.querySelector('.star-rating-input').addEventListener('mouseleave', () => {
-        const selectedValue = document.getElementById('notation-input').value;
-        stars.forEach(s => s.classList.toggle('fas', s.dataset.value <= selectedValue));
-        stars.forEach(s => s.classList.toggle('far', s.dataset.value > selectedValue));
-    });
-
-    evaluationForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const button = this.querySelector('[type=submit]');
-        const originalButtonHtml = button.innerHTML;
-        if (!this.querySelector('#notation-input').value) { alert('Veuillez sélectionner une note.'); return; }
-        button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
-        try {
-            const formData = new FormData(this);
-            const response = await fetch('actions/submit_evaluation.php', { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const result = await response.json();
-            if (result.status !== 'success') throw new Error(result.message);
-            
-            showGlobalFeedback(result.message, 'success');
-            evaluationModal.style.display = 'none';
-            const sessionId = formData.get('session_id');
-            const actionArea = document.querySelector(`.session-card[data-id='${sessionId}'] .session-actions`);
-            let starsHtml = '';
-            for(let i = 1; i <= 5; i++) { starsHtml += `<i class="fa${i <= formData.get('notation') ? 's' : 'r'} fa-star"></i>`; }
-            actionArea.innerHTML = `<div class="rating-display" title="Votre note : ${formData.get('notation')}/5">${starsHtml}</div>`;
-        } catch (error) {
-            showGlobalFeedback(error.message || "Erreur lors de l'envoi de l'évaluation.", 'error');
-        } finally {
-            button.disabled = false; button.innerHTML = originalButtonHtml;
-        }
-    });
-
-    // --- CHAT LOGIC ---
-    const messageArea = document.getElementById('message-area');
-    const messageForm = document.getElementById('message-form');
-    const chatHeaderName = document.getElementById('chat-header-name');
-    const convoList = document.querySelector('.conversation-list');
-
-    function handleContactFromGrid(button) {
-        const { userId, userName, userPhoto } = button.dataset;
-        // Check if a conversation item already exists
-        let convoItem = convoList.querySelector(`.conversation-item[data-user-id='${userId}']`);
-        if (!convoItem) {
-            // Create a new conversation item and add it to the top of the list
-            const newConvoHtml = `
-            <div class="conversation-item" data-user-id="${userId}" data-user-name="${userName}" data-user-photo="${userPhoto}">
-                <div class="convo-avatar-wrapper"><img src="${userPhoto}"></div>
-                <div class="convo-details"><span class="convo-name">${userName}</span><p class="convo-preview">Commencez la conversation...</p></div>
-                <span class="convo-time"></span>
-            </div>`;
-            convoList.querySelector('.empty-chat')?.remove();
-            convoList.insertAdjacentHTML('beforeend', newConvoHtml);
-            convoItem = convoList.querySelector(`.conversation-item[data-user-id='${userId}']`);
-        }
-        convoItem.click(); // Simulate a click to open the chat
-    }
-
-    function handleConversationClick(convoItem) {
-        const { userId, userName } = convoItem.dataset;
-        openChatWindow(userId, userName);
-    }
-
-    async function openChatWindow(userId, userName) {
-        document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
-        const targetConvo = document.querySelector(`.conversation-item[data-user-id='${userId}']`);
-        if(targetConvo) targetConvo.classList.add('active');
-
-        activeChatUserId = userId;
-        chatHeaderName.textContent = userName;
-        messageArea.innerHTML = '<p class="empty-chat"><i class="fas fa-spinner fa-spin"></i> Chargement des messages...</p>';
-        messageForm.style.display = 'flex';
-        targetConvo?.querySelector('.unread-dot')?.remove();
-
-        try {
-            const formData = new FormData();
-            formData.append('userId', activeChatUserId);
-            formData.append('csrf_token', csrfToken);
-            const response = await fetch('actions/fetch_messages.php', { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const result = await response.json();
-            if (result.status === 'success') {
-                renderMessages(result.messages);
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error) { messageArea.innerHTML = `<p class="empty-chat">Erreur au chargement des messages.</p>`; }
     }
     
-    function renderMessages(messages) {
-        messageArea.innerHTML = messages.length === 0 ? '<p class="empty-chat">Aucun message. Commencez la conversation !</p>' : '';
-        messages.forEach(msg => {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${msg.idExpediteur == currentUserId ? 'message-outgoing' : 'message-incoming'}`;
-            // Sanitize message content before inserting
-            const p = document.createElement('p');
-            p.innerText = msg.contenuMessage;
-            msgDiv.innerHTML = p.innerHTML.replace(/\n/g, '<br>');
-            messageArea.appendChild(msgDiv);
-        });
-        messageArea.scrollTop = messageArea.scrollHeight;
-    }
+    // --- Initialization & Event Listeners ---
 
-    async function refreshConversations() {
-        try {
-            const formData = new FormData();
-            formData.append('csrf_token', csrfToken);
-
-            const response = await fetch('actions/fetch_conversations.php', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch conversations');
-
-            const result = await response.json();
-            if (result.status === 'success') {
-                updateConversationsList(result.conversations);
-            }
-        } catch (error) {
-            console.error('Error refreshing conversations:', error);
+    // General click handler for dynamic elements
+    document.body.addEventListener('click', e => {
+        const cancelBtn = e.target.closest('.btn-cancel');
+        if (cancelBtn) {
+             // Add cancel session logic here
+             return;
         }
-    }
 
-    function updateConversationsList(conversations) {
-        const conversationList = document.querySelector('.conversation-list');
-        const header = conversationList.querySelector('.chat-header');
-
-        // Clear existing conversations but keep header
-        conversationList.innerHTML = '';
-        conversationList.appendChild(header);
-
-        if (conversations.length === 0) {
-            const emptyMsg = document.createElement('p');
-            emptyMsg.className = 'empty-chat';
-            emptyMsg.style.padding = '1rem';
-            emptyMsg.textContent = 'Aucune conversation.';
-            conversationList.appendChild(emptyMsg);
+        const evaluateBtn = e.target.closest('.btn-evaluate');
+        if (evaluateBtn) {
+            // Add evaluation modal logic here
             return;
         }
 
-        conversations.forEach(convo => {
-            const convoDiv = document.createElement('div');
-            convoDiv.className = 'conversation-item';
-            convoDiv.dataset.userId = convo.userId;
-            convoDiv.dataset.userName = convo.userName;
-            convoDiv.dataset.userPhoto = convo.userPhoto;
-
-            // Add active class if this is the current conversation
-            if (activeChatUserId && activeChatUserId == convo.userId) {
-                convoDiv.classList.add('active');
-            }
-
-            convoDiv.innerHTML = `
-                <img src="${convo.userPhoto}" alt="Photo de ${convo.userName}" class="conversation-avatar">
-                <div class="conversation-info">
-                    <h6 class="conversation-name">${convo.userName}</h6>
-                    <p class="conversation-preview">${convo.isFromMe ? 'Vous: ' : ''}${convo.lastMessage.substring(0, 30)}${convo.lastMessage.length > 30 ? '...' : ''}</p>
-                </div>
-                ${convo.unreadCount > 0 ? '<div class="unread-dot"></div>' : ''}
-            `;
-
-            // Add click event listener
-            convoDiv.addEventListener('click', () => {
-                openChat(convo.userId, convo.userName, convo.userPhoto);
-            });
-
-            conversationList.appendChild(convoDiv);
-        });
-    }
-
-    messageForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const textarea = e.target.querySelector('textarea');
-        const messageText = textarea.value.trim();
-        if (!messageText || !activeChatUserId) return;
-        
-        // Add message locally for instant feedback
-        const p = document.createElement('p');
-        p.innerText = messageText;
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'chat-message message-outgoing';
-        msgDiv.innerHTML = p.innerHTML.replace(/\n/g, '<br>');
-        messageArea.querySelector('.empty-chat')?.remove();
-        messageArea.appendChild(msgDiv);
-        messageArea.scrollTop = messageArea.scrollHeight;
-        textarea.value = '';
-        
-        try {
-            const formData = new FormData(messageForm);
-            formData.append('recipientId', activeChatUserId);
-            // The form has a hidden CSRF token, so it's sent automatically
-            const response = await fetch('actions/send_message.php', { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Failed to send');
-
-            // Refresh conversations list to show updated last message
-            await refreshConversations();
-        } catch (error) {
-            console.error('Send error:', error);
-            msgDiv.style.opacity = '0.5';
-            msgDiv.title = "Le message n'a pas pu être envoyé.";
+        const convoItem = e.target.closest('.conversation-item');
+        if (convoItem) {
+            // Add conversation click logic here
+            return;
         }
     });
+
+    // Tab listeners
+    tabs.forEach(tab => {
+        tab.addEventListener('click', e => {
+            e.preventDefault();
+            // For links that should navigate away, like "Trouver des sessions"
+            if (tab.href && !tab.href.endsWith('#')) {
+                 // Check if it's an absolute URL or different page
+                const currentLoc = window.location.pathname.split('/').pop();
+                const targetLoc = tab.pathname.split('/').pop();
+                if(currentLoc !== targetLoc) {
+                    window.location.href = tab.href;
+                    return;
+                }
+            }
+            activateTab(tab.dataset.tab);
+        });
+    });
+
+    // Availability form
+    if (availabilityForm) {
+        availabilityForm.addEventListener('submit', handleAvailabilitySubmit);
+    }
+
+    // Initial load
+    const initialTab = window.location.hash.substring(1) || 'statistiques';
+    activateTab(initialTab);
 });
 </script>
 

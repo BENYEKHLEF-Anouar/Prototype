@@ -74,6 +74,7 @@ CREATE TABLE Administrateur (
 CREATE TABLE Session (
     idSession INT AUTO_INCREMENT PRIMARY KEY,
     titreSession VARCHAR(150) NOT NULL,
+    descriptionSession TEXT,
     sujet VARCHAR(100),
     dateSession DATE NOT NULL,
     heureSession TIME NOT NULL,
@@ -239,13 +240,13 @@ VALUES
 ('Admin', 'Super', 'admin@mentora.com', 'admin_hash_pwd'),
 ('Gérant', 'Nina', 'nina.admin@mentora.com', 'admin_hash_pwd2');
 
-INSERT INTO Session (titreSession, sujet, dateSession, heureSession, statutSession, typeSession, tarifSession, duree_minutes, niveau, idEtudiantDemandeur, idMentorAnimateur)
-VALUES 
-('Initiation à Python', 'Informatique', '2025-06-25', '10:00:00', 'validee', 'en_ligne', 20.00, 60, 'L1', 1, 1),
-('Analyse de données R', 'Informatique', '2025-06-26', '14:00:00', 'en_attente', 'presentiel', 30.00, 90, 'L2', 2, 2),
-('Optique de base', 'Physique', '2025-06-27', '09:00:00', 'validee', 'en_ligne', 15.00, 45, 'L3', 3, 2),
-('Machine Learning 101', 'Informatique', '2025-07-01', '11:00:00', 'terminee', 'en_ligne', 40.00, 120, 'L2', 2, 2),
-('Introduction à Java', 'Informatique', '2025-07-02', '13:00:00', 'annulee', 'presentiel', 25.00, 60, 'L1', 1, 1);
+INSERT INTO Session (titreSession, descriptionSession, sujet, dateSession, heureSession, statutSession, typeSession, tarifSession, duree_minutes, niveau, idEtudiantDemandeur, idMentorAnimateur)
+VALUES
+('Initiation à Python', 'Découvrez les bases de la programmation Python avec des exercices pratiques', 'Informatique', '2025-06-25', '10:00:00', 'validee', 'en_ligne', 20.00, 60, 'L1', 1, 1),
+('Analyse de données R', 'Apprenez à analyser des données avec le langage R et ses bibliothèques', 'Informatique', '2025-06-26', '14:00:00', 'en_attente', 'presentiel', 30.00, 90, 'L2', 2, 2),
+('Optique de base', 'Cours d\'introduction aux principes fondamentaux de l\'optique', 'Physique', '2025-06-27', '09:00:00', 'validee', 'en_ligne', 15.00, 45, 'L3', 3, 2),
+('Machine Learning 101', 'Introduction aux concepts de base du machine learning', 'Informatique', '2025-07-01', '11:00:00', 'terminee', 'en_ligne', 40.00, 120, 'L2', 2, 2),
+('Introduction à Java', 'Premiers pas avec le langage de programmation Java', 'Informatique', '2025-07-02', '13:00:00', 'annulee', 'presentiel', 25.00, 60, 'L1', 1, 1);
 
 
 -- Inserting into Participation
@@ -372,16 +373,16 @@ VALUES
 
 
 -- Inserting Sessions
-INSERT INTO Session (titreSession, sujet, dateSession, heureSession, statutSession, typeSession, tarifSession, duree_minutes, niveau, idEtudiantDemandeur, idMentorAnimateur)
+INSERT INTO Session (titreSession, descriptionSession, sujet, dateSession, heureSession, statutSession, typeSession, tarifSession, duree_minutes, niveau, idEtudiantDemandeur, idMentorAnimateur)
 VALUES
-('Découverte de la Biologie', 'Biologie', '2025-06-30', '10:00:00', 'validee', 'en_ligne', 15.00, 60, 'L1', 1, 3),
-('Java pour Débutants', 'Informatique', '2025-07-01', '11:00:00', 'validee', 'en_ligne', 20.00, 90, 'L2', 2, 4),
-('Analyse Complexe', 'Mathématiques', '2025-07-02', '14:00:00', 'validee', 'en_ligne', 25.00, 120, 'L3', 3, 5),
-('Théories Microéco', 'Économie', '2025-07-03', '15:00:00', 'en_attente', 'presentiel', 10.00, 45, 'L1', 4, 6),
-('La Révolution Française', 'Histoire', '2025-07-04', '09:00:00', 'validee', 'presentiel', 30.00, 90, 'M1', 5, 7),
-('Créer un site Web', 'Développement Web', '2025-07-05', '13:00:00', 'validee', 'en_ligne', 40.00, 120, 'L3', 6, 8),
-('Droit Européen - Introduction', 'Droit', '2025-07-06', '17:00:00', 'en_attente', 'en_ligne', 35.00, 90, 'M2', 7, 9),
-('Introduction à la Physique Quantique', 'Physique', '2025-07-07', '16:00:00', 'validee', 'en_ligne', 50.00, 120, 'L2', 8, 10);
+('Découverte de la Biologie', 'Explorez les merveilles du monde vivant et ses mécanismes', 'Biologie', '2025-06-30', '10:00:00', 'validee', 'en_ligne', 15.00, 60, 'L1', 1, 3),
+('Java pour Débutants', 'Apprenez la programmation orientée objet avec Java', 'Informatique', '2025-07-01', '11:00:00', 'validee', 'en_ligne', 20.00, 90, 'L2', 2, 4),
+('Analyse Complexe', 'Maîtrisez les fonctions complexes et leurs applications', 'Mathématiques', '2025-07-02', '14:00:00', 'validee', 'en_ligne', 25.00, 120, 'L3', 3, 5),
+('Théories Microéco', 'Comprendre les principes de base de la microéconomie', 'Économie', '2025-07-03', '15:00:00', 'en_attente', 'presentiel', 10.00, 45, 'L1', 4, 6),
+('La Révolution Française', 'Plongez dans l\'histoire de la Révolution française', 'Histoire', '2025-07-04', '09:00:00', 'validee', 'presentiel', 30.00, 90, 'M1', 5, 7),
+('Créer un site Web', 'Développez votre premier site web avec HTML, CSS et JavaScript', 'Développement Web', '2025-07-05', '13:00:00', 'validee', 'en_ligne', 40.00, 120, 'L3', 6, 8),
+('Droit Européen - Introduction', 'Découvrez les fondements du droit européen', 'Droit', '2025-07-06', '17:00:00', 'en_attente', 'en_ligne', 35.00, 90, 'M2', 7, 9),
+('Introduction à la Physique Quantique', 'Explorez les mystères de la physique quantique', 'Physique', '2025-07-07', '16:00:00', 'validee', 'en_ligne', 50.00, 120, 'L2', 8, 10);
 
 -- Adding some available sessions for testing student booking workflow
 INSERT INTO Session (titreSession, sujet, dateSession, heureSession, statutSession, typeSession, tarifSession, duree_minutes, niveau, idMentorAnimateur, descriptionSession)
