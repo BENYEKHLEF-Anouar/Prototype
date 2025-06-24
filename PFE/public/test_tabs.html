@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tabs</title>
+    <link rel="stylesheet" href="../assets/css/mentor_dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Tab Functionality Test</h1>
+        
+        <div class="debug-info">
+            <h3>Debug Information</h3>
+            <div id="debug-output"></div>
+        </div>
+
+        <div class="dashboard-main-content">
+            <nav class="dashboard-nav">
+                <ul>
+                    <li><a href="#statistiques" class="dashboard-tab active" data-tab="statistiques"><i class="fas fa-chart-line"></i> Statistiques</a></li>
+                    <li><a href="#sessions" class="dashboard-tab" data-tab="sessions"><i class="fas fa-tasks"></i> Sessions</a></li>
+                    <li><a href="#messagerie" class="dashboard-tab" data-tab="messagerie"><i class="fas fa-envelope"></i> Messagerie</a></li>
+                    <li><a href="#ressources" class="dashboard-tab" data-tab="ressources"><i class="fas fa-book-open"></i> Ressources</a></li>
+                </ul>
+            </nav>
+            
+            <div id="statistiques" class="tab-content active">
+                <h3>Statistiques Tab</h3>
+                <p>This is the statistics tab content.</p>
+            </div>
+            
+            <div id="sessions" class="tab-content">
+                <h3>Sessions Tab</h3>
+                <p>This is the sessions tab content.</p>
+            </div>
+            
+            <div id="messagerie" class="tab-content">
+                <h3>Messagerie Tab</h3>
+                <p>This is the messagerie tab content.</p>
+            </div>
+            
+            <div id="ressources" class="tab-content">
+                <h3>Ressources Tab</h3>
+                <p>This is the ressources tab content.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const debugOutput = document.getElementById('debug-output');
+            
+            function log(message) {
+                console.log(message);
+                debugOutput.innerHTML += '<div>' + message + '</div>';
+            }
+            
+            log('🚀 Test page starting...');
+            log('🔍 Current URL hash: ' + window.location.hash);
+            
+            const tabs = document.querySelectorAll('.dashboard-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            log('📊 Found ' + tabs.length + ' tabs and ' + tabContents.length + ' tab contents');
+            
+            function activateTab(tabName) {
+                log('🎯 Activating tab: ' + tabName);
+                
+                tabs.forEach(t => {
+                    const isActive = t.dataset.tab === tabName;
+                    t.classList.toggle('active', isActive);
+                });
+                
+                tabContents.forEach(c => {
+                    const isActive = c.id === tabName;
+                    c.classList.toggle('active', isActive);
+                });
+                
+                if(window.location.hash !== '#' + tabName) {
+                    history.pushState(null, null, '#' + tabName);
+                }
+            }
+            
+            tabs.forEach((tab, index) => {
+                log('🔗 Setting up tab ' + index + ': ' + tab.dataset.tab);
+                tab.addEventListener('click', e => {
+                    e.preventDefault();
+                    log('🖱️ Tab clicked: ' + tab.dataset.tab);
+                    activateTab(e.currentTarget.dataset.tab);
+                });
+            });
+            
+            // Initialize with current hash or default
+            const initialTab = window.location.hash.substring(1) || 'statistiques';
+            log('🎬 Initial tab: ' + initialTab);
+            activateTab(initialTab);
+            
+            log('✅ Tab navigation initialized successfully!');
+        });
+    </script>
+</body>
+</html>
